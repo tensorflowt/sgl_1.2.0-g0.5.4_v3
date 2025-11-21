@@ -345,6 +345,7 @@ impl PolicyRegistry {
         &self,
         prefill_workers: &[Arc<dyn Worker>],
         decode_workers: &[Arc<dyn Worker>],
+        tokenizer: Option<Arc<dyn Tokenizer>>,
     ) {
         // Initialize prefill policy if it's cache-aware
         if let Some(prefill_policy) = self.prefill_policy.read().unwrap().as_ref() {
@@ -358,6 +359,22 @@ impl PolicyRegistry {
                             prefill_workers.len()
                         );
                         cache_aware.init_workers(prefill_workers);
+
+                        // 启动缓存同步  
+                        if cache_aware.is_cache_sync_enabled() {  
+                            if let Some(worker) = prefill_workers.first() {  
+                                if let Some(tok) = tokenizer {  
+                                    info!(  
+                                        "Starting cache sync with prefill worker: {}",  
+                                        worker.url()  
+                                    );  
+                                    cache_aware.start_cache_sync(  
+                                        worker.url().to_string(),  
+                                        tok,  
+                                    );  
+                                }  
+                            }  
+                        }
                     }
                 }
             }
