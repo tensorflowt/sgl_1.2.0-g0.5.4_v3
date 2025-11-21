@@ -746,34 +746,35 @@ impl StepExecutor for UpdatePoliciesStep {
 
         // 在 UpdatePoliciesStep::execute 中添加 PD 模式的处理  
         info!("Start PD mode");
-        if config.worker_type == Some(WorkerType::Prefill { bootstrap_port: config.bootstrap_port }) {  
-            // 获取所有 prefill 和 decode workers  
-            info!("Start PD mode: {}", config.url);
-            let prefill_workers = app_context.worker_registry.get_workers_filtered(  
-                None,  
-                Some(WorkerType::Prefill { bootstrap_port: None }),  
-                None,  
-                false,  
-            );  
-            let decode_workers = app_context.worker_registry.get_workers_filtered(  
-                None,  
-                Some(WorkerType::Decode),  
-                None,  
-                false,  
-            );  
-            
-            // 如果这是第一个 prefill worker,启动缓存同步  
-            info!("Start PD mode: prefill_workers.len() = {}", prefill_workers.len());
-            if prefill_workers.len() == 1 { 
-                info!("Start PD mode: prefill_workers.len() = 1");
-                app_context.policy_registry.init_pd_cache_aware_policies(  
-                    &prefill_workers,  
-                    &decode_workers,  
-                    app_context.tokenizer.clone(),  
+        // 检查是否是 PD 模式的 prefill worker  
+        if let Some(worker_type_str) = &config.worker_type {  
+            if worker_type_str == "prefill" {  
+                // 获取所有 prefill 和 decode workers  
+                let prefill_workers = app_context.worker_registry.get_workers_filtered(  
+                    None,  
+                    Some(WorkerType::Prefill { bootstrap_port: None }),  
+                    None,  
+                    false,  
                 );  
-            }
-            else {
-                info!("Start PD mode: prefill_workers.len() = {}", prefill_workers.len());
+                let decode_workers = app_context.worker_registry.get_workers_filtered(  
+                    None,  
+                    Some(WorkerType::Decode),  
+                    None,  
+                    false,  
+                );  
+                
+                // 如果这是第一个 prefill worker,启动缓存同步  
+                if prefill_workers.len() == 1 {  
+                    info!("First prefill worker registered, initializing PD cache-aware policies");  
+                    app_context.policy_registry.init_pd_cache_aware_policies(  
+                        &prefill_workers,  
+                        &decode_workers,  
+                        app_context.tokenizer.clone(),  
+                    );  
+                }
+                else {
+                    info!("Not the first prefill worker, skipping PD cache-aware policies initialization");  
+                }
             }  
         }
 

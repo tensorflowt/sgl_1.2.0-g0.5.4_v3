@@ -5,6 +5,8 @@ use std::{
 
 use tracing::{debug, info, warn};
 
+use crate::tokenizer::traits::Tokenizer;
+
 /// Policy Registry for managing model-to-policy mappings
 ///
 /// This registry manages the dynamic assignment of load balancing policies to models.
